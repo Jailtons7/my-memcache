@@ -30,7 +30,6 @@ async def manage_connection(conn, addr):
             if cmd_list[0] == "set":
                 response = await cmd.set()
             elif cmd_list[0] == "get":
-                breakpoint()
                 response = await cmd.get()
             await loop.sock_sendall(conn, bytes(response, "utf-8"))
     finally:
