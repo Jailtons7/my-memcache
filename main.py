@@ -8,6 +8,9 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
+cache = dict()
+
+
 async def manage_connection(conn, addr):
     try:
         loop = asyncio.get_event_loop()
@@ -20,15 +23,25 @@ async def manage_connection(conn, addr):
 
             logger.info(f'Received {raw_command.strip()} bytes from {addr}')
             command = re.split(r"\s+", raw_command.strip())
+            response = "END\r\n"
             if "set" in command:
-                command_name, key, flags, exptime, byte_count, *noreply = command[0:2] + list(map(int, command[2:5]))
+                command_name = command[0]
+                key = command[1]
+                flags = int(command[2])
+                exptime = int(command[3])
+                byte_count = int(command[4])
+                noreply = command[5]
                 data = (await loop.sock_recv(conn, byte_count)).decode('utf-8')
                 logger.info(f'Received {data.strip()} bytes from {addr}')
+                cache[key] = f"VALUE {key} {flags} {byte_count}\r\n{data.strip()}"
+                response = "STORED\r\n"
             elif "get" in command:
                 command_name, key = command
-            await loop.sock_sendall(conn, bytes("END\r\n", "utf-8"))
+                value = cache.get(key)
+                response = f"VALUE {value}\r\nEND\r\n" or "END\r\n"
+            await loop.sock_sendall(conn, bytes(response, "utf-8"))
     finally:
-        await conn.close()
+        conn.close()
 
 
 async def serve_forever(port=11211):
@@ -36,11 +49,11 @@ async def serve_forever(port=11211):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     logger.info('Starting server on port %d', port)
     s.bind(("0.0.0.0", port))
-    s.listen(8)
+    s.listen(socket.SOMAXCONN)
     s.setblocking(False)
     while True:
         conn, addr = await loop.sock_accept(s)
-        await loop.create_task(manage_connection(conn, addr))
+        loop.create_task(manage_connection(conn, addr))
 
 
 async def main():
