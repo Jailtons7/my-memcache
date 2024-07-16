@@ -3,7 +3,7 @@ import socket
 import logging
 import asyncio
 
-from commands import Commands
+from src.commands import Commands
 
 
 logger = logging.getLogger(__name__)

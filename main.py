@@ -1,7 +1,7 @@
 import argparse
 import asyncio
 
-from server import serve_forever
+from src.server import serve_forever
 
 
 async def main():
