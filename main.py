@@ -25,12 +25,17 @@ async def manage_connection(conn, addr):
             logger.info(f'Received {raw_command.strip()} bytes from {addr}')
             command = re.split(r"\s+", raw_command.strip())
             response = "END\r\n"
-            if "set" in command:
-                command_name = command[0]
-                key = command[1]
-                flags = int(command[2])
-                exptime = int(command[3])
-                byte_count = int(command[4])
+            if command[0] == "set":
+                try:
+                    command_name = command[0]
+                    key = command[1]
+                    flags = int(command[2])
+                    exptime = int(command[3])
+                    byte_count = int(command[4])
+                except IndexError:
+                    response = "the set\r\n"
+                    await loop.sock_sendall(conn, bytes(response, "utf-8"))
+                    continue
                 noreply = ''
                 with suppress(IndexError):
                     noreply = command[5]
@@ -38,7 +43,7 @@ async def manage_connection(conn, addr):
                 logger.info(f'Received {data.strip()} bytes from {addr}')
                 cache[key] = f"VALUE {key} {flags} {byte_count}\n{data.strip()}"
                 response = "" if noreply else "STORED\r\n"
-            elif "get" in command:
+            elif command[0] == "get":
                 command_name, key = command
                 value = cache.get(key)
                 if value:
