@@ -3,6 +3,7 @@ import argparse
 import socket
 import logging
 import asyncio
+from contextlib import suppress
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -30,15 +31,18 @@ async def manage_connection(conn, addr):
                 flags = int(command[2])
                 exptime = int(command[3])
                 byte_count = int(command[4])
-                noreply = command[5]
+                noreply = ''
+                with suppress(IndexError):
+                    noreply = command[5]
                 data = (await loop.sock_recv(conn, byte_count)).decode('utf-8')
                 logger.info(f'Received {data.strip()} bytes from {addr}')
-                cache[key] = f"VALUE {key} {flags} {byte_count}\r\n{data.strip()}"
-                response = "STORED\r\n"
+                cache[key] = f"VALUE {key} {flags} {byte_count}\n{data.strip()}"
+                response = "" if noreply else "STORED\r\n"
             elif "get" in command:
                 command_name, key = command
                 value = cache.get(key)
-                response = f"VALUE {value}\r\nEND\r\n" or "END\r\n"
+                if value:
+                    response = f"{value}\r\nEND\r\n"
             await loop.sock_sendall(conn, bytes(response, "utf-8"))
     finally:
         conn.close()
