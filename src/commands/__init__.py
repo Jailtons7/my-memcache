@@ -28,9 +28,9 @@ class Commands:
     async def get(self) -> str:
         command_name, key = self.cmd_list
         value = self.cache.get(key)
-        if value and (value["exptime"] is None or value["exptime"] >= datetime.now()):
-            return f"{self._display(key)}\r\nEND\r\n"
-        return "END\r\n"
+        if not value or self._is_expired(key=key):
+            return "END\r\n"
+        return f"{self._display(key)}\r\nEND\r\n"
 
     async def set(self) -> str:
         try:
@@ -69,3 +69,15 @@ class Commands:
         if expiration == 0:
             return None
         return datetime.now() + timedelta(seconds=expiration)
+
+    def _is_expired(self, key) -> bool:
+        """
+        Checks if the stored key is expired. If so pops the key from the cache.
+        :param key:
+        :return:
+        """
+        if self.cache[key]["exptime"] is None or self.cache[key]["exptime"] > datetime.now():
+            return False
+
+        self.cache.pop(key)
+        return True
