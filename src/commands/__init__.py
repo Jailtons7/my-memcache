@@ -1,7 +1,7 @@
 import logging
+from datetime import datetime, timedelta
 from socket import socket
-from typing import List, Tuple
-from contextlib import suppress
+from typing import List, Tuple, Union
 from asyncio import AbstractEventLoop
 
 
@@ -28,11 +28,12 @@ class Commands:
     async def get(self) -> str:
         command_name, key = self.cmd_list
         value = self.cache.get(key)
-        return f"{value}\r\nEND\r\n" if value else "END\r\n"
+        if value and (value["exptime"] is None or value["exptime"] >= datetime.now()):
+            return f"{self._display(key)}\r\nEND\r\n"
+        return "END\r\n"
 
     async def set(self) -> str:
         try:
-            command_name = self.cmd_list[0]
             key = self.cmd_list[1]
             flags = int(self.cmd_list[2])
             exptime = int(self.cmd_list[3])
@@ -41,10 +42,30 @@ class Commands:
             response = "the set command \r\n"
             await self.loop.sock_sendall(self.conn, bytes(response, "utf-8"))
             return ""
-        noreply = ""
-        with suppress(IndexError):
+        try:
             noreply = self.cmd_list[5]
+        except IndexError:
+            noreply = ""
         data = (await self.loop.sock_recv(self.conn, byte_count)).decode('utf-8')
         logger.info(f'Received {data.strip()} bytes from {self.addr}')
-        self.cache[key] = f"VALUE {key} {flags} {byte_count}\n{data.strip()}"
+        self.cache[key] = {
+            "flags": flags,
+            "exptime": self._set_expiration(exptime),
+            "byte_count": byte_count,
+            "noreply": noreply,
+            "data": data,
+        }
+        logger.info(f"Stored cache:\r\n{self.cache}")
         return "" if noreply else "STORED\r\n"
+
+    def _display(self, key):
+        return (
+            f"VALUE {key} {self.cache[key]['flags']} {self.cache[key]['byte_count']}\r\n"
+            f"{self.cache[key]['data'].strip()}"
+        )
+
+    @staticmethod
+    def _set_expiration(expiration: int) -> Union[datetime, None]:
+        if expiration == 0:
+            return None
+        return datetime.now() + timedelta(seconds=expiration)
