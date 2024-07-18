@@ -58,6 +58,18 @@ class Commands:
         logger.info(f"Stored cache:\r\n{self.cache}")
         return "" if noreply else "STORED\r\n"
 
+    async def add(self):
+        if self.cache.get(self.cmd_list[1]) is None:
+            return await self.set()
+        _ = (await self.loop.sock_recv(self.conn, int(self.cmd_list[4]))).decode('utf-8')
+        return "NOT_STORED\r\n"
+
+    async def replace(self):
+        if self.cache.get(self.cmd_list[1]) is not None:
+            return await self.set()
+        _ = (await self.loop.sock_recv(self.conn, int(self.cmd_list[4]))).decode('utf-8')
+        return "NOT_STORED\r\n"
+
     def _display(self, key):
         return (
             f"VALUE {key} {self.cache[key]['flags']} {self.cache[key]['byte_count']}\r\n"
