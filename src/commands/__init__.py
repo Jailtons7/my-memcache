@@ -45,7 +45,6 @@ class Commands:
             "noreply": kwargs["noreply"],
             "data": data,
         }
-        logger.info(f"Stored cache:\r\n{self.cache}")
         return "" if kwargs["noreply"] else "STORED\r\n"
 
     async def add(self):
@@ -61,10 +60,10 @@ class Commands:
         return "NOT_STORED\r\n"
 
     async def append(self):
-        return self._amend_data(at_end=True)
+        return await self._amend_data(at_end=True)
 
     async def prepend(self):
-        return self._amend_data(at_end=False)
+        return await self._amend_data(at_end=False)
 
     async def parse_command(self) -> Union[Dict[str, Any], None]:
         try:
