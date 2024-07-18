@@ -35,6 +35,8 @@ async def manage_connection(conn, addr):
                 "get": cmd.get,
                 "add": cmd.add,
                 "replace": cmd.replace,
+                "append": cmd.append,
+                "prepend": cmd.prepend,
             }
             try:
                 response = await commands.get(cmd_list[0], default_response)()
