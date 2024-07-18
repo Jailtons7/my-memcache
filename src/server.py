@@ -13,6 +13,10 @@ logging.basicConfig(level=logging.INFO)
 cache = dict()
 
 
+async def default_response():
+    return "END\r\n"
+
+
 async def manage_connection(conn, addr):
     try:
         loop = asyncio.get_event_loop()
@@ -24,13 +28,15 @@ async def manage_connection(conn, addr):
                 break
 
             logger.info(f'Received {raw_command.strip()} bytes from {addr}')
-            response = "END\r\n"
             cmd_list = re.split(r"\s+", raw_command.strip())
             cmd = Commands(conn=conn, addr=addr, loop=loop, cmd_list=cmd_list, cache=cache)
-            if cmd_list[0] == "set":
-                response = await cmd.set()
-            elif cmd_list[0] == "get":
-                response = await cmd.get()
+            commands = {
+                "set": cmd.set,
+                "get": cmd.get,
+                "add": cmd.add,
+                "replace": cmd.replace,
+            }
+            response = await commands.get(cmd_list[0], default_response)()
             await loop.sock_sendall(conn, bytes(response, "utf-8"))
     finally:
         conn.close()
