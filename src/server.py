@@ -4,7 +4,7 @@ import logging
 import asyncio
 
 from src.commands import Commands
-
+from src.commands.exceptions import CommandError
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -36,7 +36,11 @@ async def manage_connection(conn, addr):
                 "add": cmd.add,
                 "replace": cmd.replace,
             }
-            response = await commands.get(cmd_list[0], default_response)()
+            try:
+                response = await commands.get(cmd_list[0], default_response)()
+            except CommandError as e:
+                response = str(e)
+
             await loop.sock_sendall(conn, bytes(response, "utf-8"))
     finally:
         conn.close()
