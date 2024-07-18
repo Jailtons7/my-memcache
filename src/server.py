@@ -42,7 +42,7 @@ async def manage_connection(conn, addr):
                 response = await commands.get(cmd_list[0], default_response)()
             except CommandError as e:
                 response = str(e)
-
+            logger.info(f"Stored cache:\r\n{cache}")
             await loop.sock_sendall(conn, bytes(response, "utf-8"))
     finally:
         conn.close()
