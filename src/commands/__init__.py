@@ -88,7 +88,7 @@ class Commands:
     async def _amend_data(self, at_end: bool = True):
         """
         Base method for append/prepend stored data.
-        Use at_end=True for append and at_end=False prepend
+        Use at_end=True for append and at_end=False for prepend.
         """
         kwargs = await self.parse_command()
         new = (await self.loop.sock_recv(self.conn, kwargs["byte_count"])).decode('utf-8')
@@ -98,8 +98,10 @@ class Commands:
         old = cached_data["data"]
         if at_end:
             cached_data["data"] = old + new
+            cached_data["byte_count"] = len(cached_data["data"])
         else:
             cached_data["data"] = new + old
+            cached_data["byte_count"] = len(cached_data["data"])
         return "" if kwargs["noreply"] else "STORED\r\n"
 
     def _display(self, key):
