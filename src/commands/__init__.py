@@ -92,16 +92,16 @@ class Commands:
         """
         kwargs = await self.parse_command()
         new = (await self.loop.sock_recv(self.conn, kwargs["byte_count"])).decode('utf-8')
+        logger.info(f'Received {new.strip()} bytes from {self.addr}')
         cached_data = self.cache.get(kwargs["key"])
         if cached_data is None:
             return "NOT_STORED\r\n"
         old = cached_data["data"]
         if at_end:
             cached_data["data"] = old + new
-            cached_data["byte_count"] = len(cached_data["data"])
         else:
             cached_data["data"] = new + old
-            cached_data["byte_count"] = len(cached_data["data"])
+        cached_data["byte_count"] = len(cached_data["data"])
         return "" if kwargs["noreply"] else "STORED\r\n"
 
     def _display(self, key):
