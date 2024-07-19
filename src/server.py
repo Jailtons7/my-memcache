@@ -17,7 +17,7 @@ async def default_response():
     return "END\r\n"
 
 
-async def manage_connection(conn, addr):
+async def connection_manager(conn, addr):
     try:
         loop = asyncio.get_event_loop()
 
@@ -30,7 +30,7 @@ async def manage_connection(conn, addr):
             logger.info(f'Received {raw_command.strip()} bytes from {addr}')
             cmd_list = re.split(r"\s+", raw_command.strip())
             cmd = Commands(conn=conn, addr=addr, loop=loop, cmd_list=cmd_list, cache=cache)
-            commands = {
+            commands_mapping = {
                 "set": cmd.set,
                 "get": cmd.get,
                 "add": cmd.add,
@@ -39,7 +39,7 @@ async def manage_connection(conn, addr):
                 "prepend": cmd.prepend,
             }
             try:
-                response = await commands.get(cmd_list[0], default_response)()
+                response = await commands_mapping.get(cmd_list[0], default_response)()
             except CommandError as e:
                 response = str(e)
             logger.info(f"Stored cache:\r\n{cache}")
@@ -57,4 +57,4 @@ async def serve_forever(port=11211):
     s.setblocking(False)
     while True:
         conn, addr = await loop.sock_accept(s)
-        loop.create_task(manage_connection(conn, addr))
+        loop.create_task(connection_manager(conn, addr))
