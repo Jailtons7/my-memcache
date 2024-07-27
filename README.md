@@ -1,6 +1,6 @@
 # MY-MEMCACHE
 This project is my implementation of an in memory cache server using Python 
-and the sockets library.
+and `sockets` library.
 
 ## RUNNING
 This project has no third-party dependencies, but since we use asyncio module
@@ -16,7 +16,7 @@ python main.py -p <int:port>
 ```
 
 ## CLIENT
-In this project we don't implemented a client, but you can use a telnet client
+In this project we don't implement a client, but you can use a telnet client
 to connect to the server:
 
 ```shell
