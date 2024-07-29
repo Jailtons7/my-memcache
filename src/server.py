@@ -2,6 +2,7 @@ import re
 import socket
 import logging
 import asyncio
+import typing
 
 from src.commands import Commands
 from src.commands.exceptions import CommandError
@@ -17,7 +18,7 @@ async def default_response():
     return "END\r\n"
 
 
-async def connection_manager(conn, addr):
+async def connection_manager(conn: socket, addr: typing.Tuple[str, int]):
     try:
         loop = asyncio.get_event_loop()
 
