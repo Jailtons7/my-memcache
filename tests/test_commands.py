@@ -30,6 +30,20 @@ async def mock_get_key(*args, **kwargs):
         return b""
 
 
+async def mock_add_key(*args, **kwargs):
+    if not hasattr(mock_add_key, "call_count"):
+        mock_add_key.call_count = 0
+
+    if mock_add_key.call_count == 0:
+        mock_add_key.call_count += 1
+        return b"add test 0 0 4"
+    elif mock_add_key.call_count == 1:
+        mock_add_key.call_count += 1
+        return b"data"
+    else:
+        return b""
+
+
 class TestCommands(unittest.TestCase):
     @patch("main.asyncio.get_event_loop")
     def test_get(self, mock_get_event_loop):
@@ -65,6 +79,23 @@ class TestCommands(unittest.TestCase):
         mock_addr = ("0.0.0.0", 11211)
 
         mock_loop.sock_recv = AsyncMock(side_effect=mock_set_key)
+
+        async def test_connection_manager():
+            await connection_manager(mock_conn, mock_addr)
+            self.assertEqual(cache["test"]["data"], "data")
+            mock_loop.sock_sendall.assert_called_with(mock_conn, b'STORED\r\n')
+
+        asyncio.run(test_connection_manager())
+
+    @patch("main.asyncio.get_event_loop")
+    def test_add_command(self, mock_get_event_loop):
+        mock_loop = AsyncMock()
+        mock_get_event_loop.return_value = mock_loop
+        mock_conn = MagicMock()
+        mock_addr = ("0.0.0.0", 11211)
+        mock_loop.sock_recv = AsyncMock(side_effect=mock_add_key)
+
+        cache.clear()
 
         async def test_connection_manager():
             await connection_manager(mock_conn, mock_addr)
