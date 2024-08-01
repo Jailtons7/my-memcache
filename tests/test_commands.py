@@ -139,6 +139,70 @@ class TestCommands(unittest.TestCase):
 
         asyncio.run(test_connection_manager())
 
+    @patch("main.asyncio.get_event_loop")
+    def test_append_command(self, mock_get_event_loop):
+        mock_loop = AsyncMock()
+        mock_get_event_loop.return_value = mock_loop
+        mock_conn = MagicMock()
+        mock_addr = ("0.0.0.0", 11211)
+
+        async def mock_sock_recv(*args, **kwargs):
+            return await mock_call_command(*args, command=b"append test 0 0 4", **kwargs)
+
+        mock_loop.sock_recv = AsyncMock(side_effect=mock_sock_recv)
+
+        async def test_connection_manager():
+            # trying to append data in a not existing key
+            await connection_manager(mock_conn, mock_addr)
+            mock_loop.sock_sendall.assert_called_with(mock_conn, b'NOT_STORED\r\n')
+            self.assertRaises(KeyError)
+            # trying to append data in an existing key
+            cache["test"] = {
+                'flags': 0,
+                'exptime': None,
+                'byte_count': 4,
+                'noreply': '',
+                'data': 'foo'
+            }
+            delattr(mock_call_command, "call_count")
+            await connection_manager(mock_conn, mock_addr)
+            mock_loop.sock_sendall.assert_called_with(mock_conn, b'STORED\r\n')
+            self.assertEqual(cache["test"]["data"], "foodata")
+
+        asyncio.run(test_connection_manager())
+
+    @patch("main.asyncio.get_event_loop")
+    def test_prepend_command(self, mock_get_event_loop):
+        mock_loop = AsyncMock()
+        mock_get_event_loop.return_value = mock_loop
+        mock_conn = MagicMock()
+        mock_addr = ("0.0.0.0", 11211)
+
+        async def mock_sock_recv(*args, **kwargs):
+            return await mock_call_command(*args, command=b"prepend test 0 0 4", **kwargs)
+
+        mock_loop.sock_recv = AsyncMock(side_effect=mock_sock_recv)
+
+        async def test_connection_manager():
+            # trying to append data in a not existing key
+            await connection_manager(mock_conn, mock_addr)
+            mock_loop.sock_sendall.assert_called_with(mock_conn, b'NOT_STORED\r\n')
+            self.assertRaises(KeyError)
+            # trying to append data in an existing key
+            cache["test"] = {
+                'flags': 0,
+                'exptime': None,
+                'byte_count': 4,
+                'noreply': '',
+                'data': 'foo'
+            }
+            delattr(mock_call_command, "call_count")
+            await connection_manager(mock_conn, mock_addr)
+            mock_loop.sock_sendall.assert_called_with(mock_conn, b'STORED\r\n')
+            self.assertEqual(cache["test"]["data"], "datafoo")
+
+        asyncio.run(test_connection_manager())
+
 
 if __name__ == '__main__':
     unittest.main()
