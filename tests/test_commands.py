@@ -130,10 +130,12 @@ class TestCommands(unittest.TestCase):
         mock_loop.sock_recv = AsyncMock(side_effect=mock_replace_key)
 
         async def test_connection_manager():
+            # trying to replace not existent key
             await connection_manager(mock_conn, mock_addr)
             mock_loop.sock_sendall.assert_called_with(mock_conn, b'NOT_STORED\r\n')
-            cache['test'] = {"flags": 0, "exptime": None, "byte_count": 4, "noreply": "", "data": "foo"}
+            # defining key and retrying to replace
             delattr(mock_replace_key, "call_count")
+            cache['test'] = {"flags": 0, "exptime": None, "byte_count": 4, "noreply": "", "data": "foo"}
             await connection_manager(mock_conn, mock_addr)
             self.assertNotEqual(cache["test"]["data"], "foo")
             self.assertEqual(cache["test"]["data"], "data")
