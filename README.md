@@ -91,7 +91,15 @@ The server will respond with `END` if the key is not set
 or if the key is `expired` otherwise the response will be
 `VALUE <key> <flags> <byte_count>\r\n<block_data>`
 
+## TESTING
+You can test this project using unittest: 
+```shell
+python -m unittest discover tests
+```
+
 ## EXAMPLES
+If you want to test manually follow the next steps:
+
 1. Starting the client connection
 ```shell
 % telnet 0.0.0.0 11211
