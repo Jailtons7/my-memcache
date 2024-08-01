@@ -14,7 +14,7 @@ async def mock_call_command(*args, **kwargs):
         return kwargs["command"]
     elif mock_call_command.call_count == 1:
         mock_call_command.call_count += 1
-        return b"data"
+        return kwargs["data"]
     else:
         return b""
 
@@ -68,7 +68,9 @@ class TestCommands(unittest.TestCase):
         mock_addr = ("0.0.0.0", 11211)
 
         async def mock_sock_recv(*args, **kwargs):
-            return await mock_call_command(*args, command=b"set test 0 0 4\r\n", **kwargs)
+            kwargs["command"] = b"set test 0 0 4\r\n"
+            kwargs["data"] = b"data"
+            return await mock_call_command(*args, **kwargs)
 
         mock_loop.sock_recv = AsyncMock(side_effect=mock_sock_recv)
         mock_loop.sock_sendall = AsyncMock()
@@ -88,7 +90,9 @@ class TestCommands(unittest.TestCase):
         mock_addr = ("0.0.0.0", 11211)
 
         async def mock_sock_recv(*args, **kwargs):
-            return await mock_call_command(*args, command=b"add test 0 0 4\r\n", **kwargs)
+            kwargs["command"] = b"add test 0 0 4\r\n"
+            kwargs["data"] = b"data"
+            return await mock_call_command(*args, **kwargs)
 
         mock_loop.sock_recv = AsyncMock(side_effect=mock_sock_recv)
 
@@ -122,7 +126,9 @@ class TestCommands(unittest.TestCase):
         mock_addr = ("0.0.0.0", 11211)
 
         async def mock_sock_recv(*args, **kwargs):
-            return await mock_call_command(*args, command=b"replace test 0 0 4", **kwargs)
+            kwargs["command"] = b"replace test 0 0 4\r\n"
+            kwargs["data"] = b"data"
+            return await mock_call_command(*args, **kwargs)
 
         mock_loop.sock_recv = AsyncMock(side_effect=mock_sock_recv)
 
@@ -147,7 +153,9 @@ class TestCommands(unittest.TestCase):
         mock_addr = ("0.0.0.0", 11211)
 
         async def mock_sock_recv(*args, **kwargs):
-            return await mock_call_command(*args, command=b"append test 0 0 4", **kwargs)
+            kwargs["command"] = b"append test 0 0 4\r\n"
+            kwargs["data"] = b"data"
+            return await mock_call_command(*args, **kwargs)
 
         mock_loop.sock_recv = AsyncMock(side_effect=mock_sock_recv)
 
@@ -179,7 +187,9 @@ class TestCommands(unittest.TestCase):
         mock_addr = ("0.0.0.0", 11211)
 
         async def mock_sock_recv(*args, **kwargs):
-            return await mock_call_command(*args, command=b"prepend test 0 0 4", **kwargs)
+            kwargs["command"] = b"prepend test 0 0 4\r\n"
+            kwargs["data"] = b"data"
+            return await mock_call_command(*args, **kwargs)
 
         mock_loop.sock_recv = AsyncMock(side_effect=mock_sock_recv)
 
