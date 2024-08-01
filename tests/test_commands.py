@@ -5,15 +5,15 @@ from unittest.mock import patch, MagicMock, AsyncMock
 from src.server import connection_manager, cache
 
 
-async def mock_set_key(*args, **kwargs):
-    if not hasattr(mock_set_key, "call_count"):
-        mock_set_key.call_count = 0
+async def mock_call_command(*args, **kwargs):
+    if not hasattr(mock_call_command, "call_count"):
+        mock_call_command.call_count = 0
 
-    if mock_set_key.call_count == 0:
-        mock_set_key.call_count += 1
-        return b"set test 0 0 4\r\n"
-    elif mock_set_key.call_count == 1:
-        mock_set_key.call_count += 1
+    if mock_call_command.call_count == 0:
+        mock_call_command.call_count += 1
+        return kwargs["command"]
+    elif mock_call_command.call_count == 1:
+        mock_call_command.call_count += 1
         return b"data"
     else:
         return b""
@@ -30,35 +30,11 @@ async def mock_get_key(*args, **kwargs):
         return b""
 
 
-async def mock_add_key(*args, **kwargs):
-    if not hasattr(mock_add_key, "call_count"):
-        mock_add_key.call_count = 0
-
-    if mock_add_key.call_count == 0:
-        mock_add_key.call_count += 1
-        return b"add test 0 0 4"
-    elif mock_add_key.call_count == 1:
-        mock_add_key.call_count += 1
-        return b"data"
-    else:
-        return b""
-
-
-async def mock_replace_key(*args, **kwargs):
-    if not hasattr(mock_replace_key, "call_count"):
-        mock_replace_key.call_count = 0
-
-    if mock_replace_key.call_count == 0:
-        mock_replace_key.call_count += 1
-        return b"replace test 0 0 4"
-    elif mock_replace_key.call_count == 1:
-        mock_replace_key.call_count += 1
-        return b"data"
-    else:
-        return b""
-
-
 class TestCommands(unittest.TestCase):
+    def setUp(self):
+        setattr(mock_call_command, "call_count", 0)
+        cache.clear()
+
     @patch("main.asyncio.get_event_loop")
     def test_get(self, mock_get_event_loop):
         mock_loop = AsyncMock()
@@ -88,11 +64,14 @@ class TestCommands(unittest.TestCase):
     def test_set_command(self, mock_get_event_loop):
         mock_loop = AsyncMock()
         mock_get_event_loop.return_value = mock_loop
-
         mock_conn = MagicMock()
         mock_addr = ("0.0.0.0", 11211)
 
-        mock_loop.sock_recv = AsyncMock(side_effect=mock_set_key)
+        async def mock_sock_recv(*args, **kwargs):
+            return await mock_call_command(*args, command=b"set test 0 0 4\r\n", **kwargs)
+
+        mock_loop.sock_recv = AsyncMock(side_effect=mock_sock_recv)
+        mock_loop.sock_sendall = AsyncMock()
 
         async def test_connection_manager():
             await connection_manager(mock_conn, mock_addr)
@@ -107,7 +86,11 @@ class TestCommands(unittest.TestCase):
         mock_get_event_loop.return_value = mock_loop
         mock_conn = MagicMock()
         mock_addr = ("0.0.0.0", 11211)
-        mock_loop.sock_recv = AsyncMock(side_effect=mock_add_key)
+
+        async def mock_sock_recv(*args, **kwargs):
+            return await mock_call_command(*args, command=b"add test 0 0 4\r\n", **kwargs)
+
+        mock_loop.sock_recv = AsyncMock(side_effect=mock_sock_recv)
 
         async def test_connection_manager():
             # trying to add non-existing key
@@ -116,7 +99,7 @@ class TestCommands(unittest.TestCase):
             self.assertEqual(cache["test"]["data"], "data")
             mock_loop.sock_sendall.assert_called_with(mock_conn, b'STORED\r\n')
             # trying to add existing key
-            delattr(mock_add_key, "call_count")
+            delattr(mock_call_command, "call_count")
             cache["test"] = {
                 'flags': 0,
                 'exptime': None,
@@ -138,15 +121,17 @@ class TestCommands(unittest.TestCase):
         mock_conn = MagicMock()
         mock_addr = ("0.0.0.0", 11211)
 
-        cache.clear()
-        mock_loop.sock_recv = AsyncMock(side_effect=mock_replace_key)
+        async def mock_sock_recv(*args, **kwargs):
+            return await mock_call_command(*args, command=b"replace test 0 0 4", **kwargs)
+
+        mock_loop.sock_recv = AsyncMock(side_effect=mock_sock_recv)
 
         async def test_connection_manager():
             # trying to replace not existent key
             await connection_manager(mock_conn, mock_addr)
             mock_loop.sock_sendall.assert_called_with(mock_conn, b'NOT_STORED\r\n')
             # defining key and retrying to replace
-            delattr(mock_replace_key, "call_count")
+            delattr(mock_call_command, "call_count")
             cache['test'] = {"flags": 0, "exptime": None, "byte_count": 4, "noreply": "", "data": "foo"}
             await connection_manager(mock_conn, mock_addr)
             self.assertNotEqual(cache["test"]["data"], "foo")
