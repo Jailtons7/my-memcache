@@ -109,12 +109,24 @@ class TestCommands(unittest.TestCase):
         mock_addr = ("0.0.0.0", 11211)
         mock_loop.sock_recv = AsyncMock(side_effect=mock_add_key)
 
-        cache.clear()
-
         async def test_connection_manager():
+            # trying to add non-existing key
+            cache.clear()
             await connection_manager(mock_conn, mock_addr)
             self.assertEqual(cache["test"]["data"], "data")
             mock_loop.sock_sendall.assert_called_with(mock_conn, b'STORED\r\n')
+            # trying to add existing key
+            delattr(mock_add_key, "call_count")
+            cache["test"] = {
+                'flags': 0,
+                'exptime': None,
+                'byte_count': 4,
+                'noreply': '',
+                'data': 'foo'
+            }
+            await connection_manager(mock_conn, mock_addr)
+            mock_loop.sock_sendall.assert_called_with(mock_conn, b'NOT_STORED\r\n')
+            self.assertEqual(cache["test"]["data"], "foo")
 
         asyncio.run(test_connection_manager())
 
